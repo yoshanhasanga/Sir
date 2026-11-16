@@ -22,12 +22,7 @@ class AuthController extends Controller
             return redirect()->route('timetable.index');
         }
 
-        // Pass sample users for demo quick-fill switcher
-        $users = User::select('id', 'name', 'email', 'role', 'designation')
-            ->orderBy('id')
-            ->get();
-
-        return view('auth.login', compact('users'));
+        return view('auth.login');
     }
 
     /**

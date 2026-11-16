@@ -31,7 +31,6 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/timetable/clear', [TimetableController::class, 'clearSlots']);
         Route::post('/timetable/day-off', [TimetableController::class, 'toggleDayOff']);
         Route::post('/progress', [TimetableController::class, 'updateProgress']);
-        Route::post('/reset', [TimetableController::class, 'resetAll']);
         Route::post('/sync-import', [TimetableController::class, 'syncImport']);
 
         // Ministry of Education Approval Workflow Routes

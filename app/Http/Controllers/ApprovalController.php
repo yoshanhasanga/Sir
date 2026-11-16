@@ -54,7 +54,7 @@ class ApprovalController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'action_type' => 'required|string|in:delete_lecturer,clear_week,clear_centre,reset_all,edit_setting,delete_slot',
+            'action_type' => 'required|string|in:delete_lecturer,clear_week,clear_centre,edit_setting,delete_slot',
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'payload' => 'nullable|array',
@@ -227,22 +227,6 @@ class ApprovalController extends Controller
                 case 'clear_centre':
                     if (isset($payload['centre_id'])) {
                         TimetableSlot::where('centre_id', $payload['centre_id'])->delete();
-                    }
-                    break;
-
-                case 'reset_all':
-                    TimetableSlot::truncate();
-                    TopicAssignment::truncate();
-                    DayOff::truncate();
-                    TopicProgress::query()->update(['manual_hours' => 0, 'remarks' => '']);
-                    Lecturer::truncate();
-                    $setting = ProgrammeSetting::first();
-                    if ($setting) {
-                        $setting->update([
-                            'start_date' => '2026-11-02',
-                            'weeks' => 20,
-                            'include_saturday' => false,
-                        ]);
                     }
                     break;
 

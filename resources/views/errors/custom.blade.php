@@ -43,7 +43,7 @@
 <body>
     <div class="box">
         <h1>ආරක්ෂක නිවේදනයයි (Security Alert)</h1>
-        <p>{{ $message ?? 'A database error occurred. For system security, technical details have been concealed and logged securely.' }}</p>
+        <p>{{ $message ?? 'A system condition was encountered. For security, technical details have been protected and logged securely.' }}</p>
         <a href="{{ url('/') }}" class="btn">Return to Dashboard</a>
     </div>
 </body>

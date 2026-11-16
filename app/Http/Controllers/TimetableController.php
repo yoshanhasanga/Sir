@@ -560,40 +560,6 @@ class TimetableController extends Controller
     }
 
     /**
-     * API: Reset all timetable and assignments data (Requires MoE Approval).
-     */
-    public function resetAll(Request $request): JsonResponse
-    {
-        if ($err = $this->checkDeletePermission()) return $err;
-
-        try {
-            DB::transaction(function () {
-                TimetableSlot::truncate();
-                TopicAssignment::truncate();
-                DayOff::truncate();
-                TopicProgress::query()->update(['manual_hours' => 0, 'remarks' => '']);
-                Lecturer::truncate();
-
-                $setting = ProgrammeSetting::first();
-                if ($setting) {
-                    $setting->update([
-                        'start_date' => '2026-11-02',
-                        'weeks' => 20,
-                        'include_saturday' => false,
-                    ]);
-                }
-            });
-
-            SecurityLog::logEvent(Auth::id(), 'database_reset', $request->ip(), $request->userAgent(), []);
-
-            return response()->json(['success' => true, 'state' => $this->getState()]);
-        } catch (QueryException $e) {
-            Log::error('Database reset DB error: ' . $e->getMessage());
-            return response()->json(['success' => false, 'message' => 'දත්ත සමුදාය Reset කිරීමේදී දෝෂයක් මතු විය.'], 500);
-        }
-    }
-
-    /**
      * API: Complete import sync from client Excel parser.
      */
     public function syncImport(Request $request): JsonResponse

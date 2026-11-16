@@ -52,27 +52,6 @@
             margin-top: 4px;
             flex-wrap: wrap;
         }
-        .db-status {
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(255,255,255,0.15);
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .db-status .dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: #2ecc71;
-            box-shadow: 0 0 6px #2ecc71;
-            transition: background 0.3s ease;
-        }
-        .db-status.saving .dot { background: #f39c12; box-shadow: 0 0 6px #f39c12; }
-        .db-status.error .dot { background: #e74c3c; box-shadow: 0 0 6px #e74c3c; }
 
         .role-pill {
             display: inline-flex;
@@ -578,11 +557,6 @@
     <div class="header-title">
         <h1>SLTES Orientation Programme 2026 – Central Timetable Planner<small>Ministry of Education, Sri Lanka • Six-month 7-Centre Timetable System</small></h1>
         <div class="header-meta">
-            <span class="db-status" id="dbStatus">
-                <span class="dot"></span>
-                <span id="dbStatusText">MySQL Connected</span>
-            </span>
-
             @if ($currentUser)
                 @if ($currentUser->role === 'moe_approver')
                     <span class="role-pill role-approver">MoE Chief Authorizer (Dual-Approval Granted)</span>
@@ -620,7 +594,6 @@
         <button data-act="exp">Export to Excel</button>
         @if ($currentUser && ($currentUser->can_edit || $currentUser->can_approve))
             <button data-act="imp">Import from Excel</button>
-            <button data-act="rst" style="color:var(--danger)">Reset Database</button>
             <input type="file" id="imp" hidden accept=".xlsx,.xls,.csv">
         @endif
     </div>
@@ -688,7 +661,7 @@
         </div>
         <div class="modal-body">
             <p style="font-size:12.5px; color:#5a6b6f; margin-bottom:14px;">
-                As mandated by the Ministry of Education, all data deletions, timetable clears, and database resets require designated MoE Chief Approver authorization before executing.
+                As mandated by the Ministry of Education, all timetable modifications, slot removals, and data clearances require designated MoE Chief Approver authorization before executing.
             </p>
             <div id="approvalsList">
                 <p style="color:#777;">Loading requests...</p>
@@ -797,14 +770,6 @@ $('#confirmProceedBtn').addEventListener('click', () => {
     }
 });
 
-function setStatus(status, text) {
-    const el = $('#dbStatus');
-    const txt = $('#dbStatusText');
-    if (!el || !txt) return;
-    el.className = 'db-status ' + (status || '');
-    txt.innerText = text || (status === 'saving' ? 'Saving...' : (status === 'error' ? 'Sync Error' : 'MySQL Connected'));
-}
-
 // Debounce helper to prevent input lag
 const debounceTimers = {};
 function debounce(key, fn, delay = 350) {
@@ -889,9 +854,8 @@ function buildClientState(data) {
 
 let S = buildClientState(INITIAL_DATA);
 
-// High-Security API Post with Sanitized Error Handling (NO raw SQL errors)
+// Seamless API Post with Sanitized Error Handling
 async function apiPost(endpoint, body) {
-    setStatus('saving');
     try {
         const res = await fetch(endpoint, {
             method: 'POST',
@@ -906,18 +870,13 @@ async function apiPost(endpoint, body) {
         const data = await res.json().catch(() => ({}));
 
         if (!res.ok) {
-            setStatus('error', 'Sync Failed');
-            // Show graceful error message without exposing SQL or technical leaks
             const cleanMsg = data.message || 'දත්ත සුරැකීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.';
             showToast('System Notice', cleanMsg, 'error');
             return null;
         }
 
-        setStatus('', 'MySQL Connected');
         return data;
     } catch (err) {
-        console.error('API Error:', err);
-        setStatus('error', 'Sync Paused');
         showToast('Connection Warning', 'Server connection momentarily unavailable. Data remains protected.', 'warning');
         return null;
     }
@@ -979,14 +938,14 @@ function vSetup() {
     <label>Start date (Monday) <input type="date" id="st" value="${S.start}" ${dis}></label>
     <label>Weeks <input type="number" id="wk" min="1" max="30" value="${S.weeks}" style="width:64px" ${dis}></label>
     <label><input type="checkbox" id="sat" ${S.sat ? 'checked' : ''} ${dis}> Include Saturday</label>
-    <p class="hint">The course is 511 lecture hours. Sessions 01–03 give 6 lecture hours a day (about 17 weeks at 5 days a week); the 3-hour night session is optional. All settings are persistently saved to MySQL.</p></section>
+    <p class="hint">The course is 511 lecture hours. Sessions 01–03 give 6 lecture hours a day (about 17 weeks at 5 days a week); the 3-hour night session is optional. All configuration changes are saved automatically.</p></section>
 
     <section class="card"><h2>Training Centres and Centre Managers</h2>
     <table class="t"><tr><th>#<th>Centre Name<th>Centre Manager<th>Contact (Phone/Email)</tr>
     ${S.C.map((c, i) => `<tr><td>${i + 1}<td><input data-c="${i}" data-f="n" value="${e(c.n)}" ${dis}><td><input data-c="${i}" data-f="m" value="${e(c.m)}" placeholder="Manager name" ${dis}><td><input data-c="${i}" data-f="p" value="${e(c.p)}" placeholder="Phone / email" ${dis}></tr>`).join('')}
     </table></section>
 
-    <section class="card"><h2>Lecturer List (${S.L.length} registered in DB)</h2>
+    <section class="card"><h2>Lecturer Directory (${S.L.length} Registered Lecturers)</h2>
     ${!IS_READONLY ? `
     <textarea id="bulk" placeholder="Type or paste names, one per line"></textarea>
     <div class="bar" style="margin-top:6px"><button class="pri" data-act="addl">+ Add lecturers</button></div>
@@ -996,7 +955,7 @@ function vSetup() {
 
 function vAsg() {
     const c = S.cur.c, all = act(), dis = IS_READONLY ? 'disabled' : '';
-    return cbar() + `<div class="card"><b>${e(S.C[c].n)}</b> | Manager: ${e(S.C[c].m || 'not set')}<p class="hint">Lecturers assigned for each topic in this centre. Changes are automatically updated in MySQL.</p></div>
+    return cbar() + `<div class="card"><b>${e(S.C[c].n)}</b> | Manager: ${e(S.C[c].m || 'not set')}<p class="hint">Lecturers assigned for each topic in this centre. Changes are saved automatically.</p></div>
     <table class="t"><tr><th>Topic<th style="width:70px">Hours<th>Lecturers assigned for this centre</tr>
     ${T.map((x, t) => {
         const ids = S.A[c][t];
@@ -1056,7 +1015,7 @@ function vProg() {
         if (p[0] === c && o.t >= 0 && o.t < 9 && p[3] < SL.length) sch[o.t] += SL[p[3]][2];
     }
     const sum = fn => f(T.reduce((a, x, t) => a + fn(x, t), 0));
-    return cbar() + `<div class="card"><b>${e(C.n)}</b> | Centre manager: ${e(C.m || 'not set')}<p class="hint">Session progress status automatically computed from conducted timetable sessions and manual extra hours in MySQL.</p></div>
+    return cbar() + `<div class="card"><b>${e(C.n)}</b> | Centre manager: ${e(C.m || 'not set')}<p class="hint">Session progress status automatically computed from scheduled timetable sessions and completed training hours.</p></div>
     <div class="bar noprint"><button onclick="print()">Print</button></div>
     <table class="t"><tr><th>Topic<th>Required h<th>Scheduled h<th>Held (timetable) h<th>Extra hours (manual)<th>Covered h<th>Remaining h<th>Status<th>Remarks</tr>
     ${T.map((x, t) => {
@@ -1103,7 +1062,7 @@ function vSum() {
     ${act().map(l => `<tr><td>${e(ln(l))}<td>${f(ld[l] || 0)}</tr>`).join('')}</table></section>`;
 }
 
-// Auto-fill algorithm with MySQL sync
+// Automated timetable scheduling algorithm
 async function auto() {
     if (IS_READONLY) return showToast('Permission Denied', 'View-only accounts cannot modify the schedule.', 'warning');
     const rem = S.C.map(() => T.map(x => x[1])), load = {}, lt = Array(NC).fill(-1), ll = Array(NC).fill(-1);
@@ -1196,7 +1155,7 @@ function requestOrExecuteDeletion(actionType, title, description, payload) {
                     payload: safePayload
                 });
                 if (res && res.success) {
-                    showToast('Authorized & Executed', 'Action executed immediately in MySQL database.', 'success');
+                    showToast('Approved & Executed', 'Action approved and updated successfully.', 'success');
                     setTimeout(() => location.reload(), 600);
                 }
             }
@@ -1204,7 +1163,7 @@ function requestOrExecuteDeletion(actionType, title, description, payload) {
     } else {
         showConfirm(
             'Ministry of Education Authorization Required',
-            `Deleting or resetting this data requires permission from the 2 Ministry of Education Approvers.<br><br>Submit authorization request for: <b>${e(title)}</b>?`,
+            `This deletion or clearing action requires permission from the 2 Ministry of Education Approvers.<br><br>Submit authorization request for: <b>${e(title)}</b>?`,
             false,
             async () => {
                 const res = await apiPost('/api/approvals', {
@@ -1556,13 +1515,6 @@ document.addEventListener('click', async ev => {
         expX();
     } else if (d.act === 'imp') {
         $('#imp').click();
-    } else if (d.act === 'rst') {
-        requestOrExecuteDeletion(
-            'reset_all',
-            'Reset Entire Database (Factory Clean)',
-            'Clears all timetable slots, assignments, lecturers, and resets settings to initial defaults.',
-            {}
-        );
     }
 });
 
