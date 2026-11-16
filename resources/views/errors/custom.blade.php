@@ -4,6 +4,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>SLTES System Notification</title>
+    <link rel="icon" type="image/webp" href="{{ asset('favicon.webp') }}">
+    <link rel="apple-touch-icon" href="{{ asset('favicon.webp') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
