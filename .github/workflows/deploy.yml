@@ -49,7 +49,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Verify Deployment Configuration
+        id: check_secrets
+        run: |
+          if [ -n "${{ secrets.SERVER_HOST }}" ]; then
+            echo "has_ssh=true" >> $GITHUB_OUTPUT
+            echo "SSH Host configured. Initiating remote server deployment..."
+          else
+            echo "has_ssh=false" >> $GITHUB_OUTPUT
+            echo "::notice title=Deployment Notice::SERVER_HOST secret is not set. If you are using cPanel Git Version Control, your live site updates automatically via cPanel Webhook."
+          fi
+
       - name: SSH & Trigger Production Update
+        if: steps.check_secrets.outputs.has_ssh == 'true'
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
